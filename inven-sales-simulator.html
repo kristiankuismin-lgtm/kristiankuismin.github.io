@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inven Sales Simulator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --surface2: #1e1e1e;
+      --border: #2a2a2a;
+      --accent: #6d28d9;
+      --accent-light: #7c3aed;
+      --accent-glow: rgba(109,40,217,0.15);
+      --green: #10b981;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --text: #f0f0f0;
+      --subtext: #888;
+      --subtext2: #555;
+      --user-bubble: #1a1040;
+      --ai-bubble: #1a1a1a;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* NAV */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 28px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .nav-tag {
+      font-size: 11px;
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      color: #a78bfa;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+
+    /* SCREENS */
+    .screen { display: none; }
+    .screen.active { display: flex; flex-direction: column; flex: 1; }
+
+    /* ─── SETUP SCREEN ─── */
+    #setup-screen {
+      align-items: center;
+      padding: 40px 20px 60px;
+    }
+    .setup-card {
+      width: 100%;
+      max-width: 640px;
+    }
+    .setup-header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    .setup-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .setup-header p {
+      color: var(--subtext);
+      font-size: 15px;
+    }
+
+    .form-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    .form-section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--subtext);
+      margin-bottom: 20px;
+    }
+
+    .field { margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--subtext);
+      margin-bottom: 6px;
+    }
+    input, textarea, select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 14px;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent-light);
+    }
+    textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+    select option { background: var(--surface2); }
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* pill selector */
+    .pill-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pill {
+      padding: 7px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .pill:hover { border-color: var(--accent-light); color: #a78bfa; }
+    .pill.selected { background: var(--accent-glow); border-color: var(--accent-light); color: #a78bfa; font-weight: 500; }
+
+    .api-notice {
+      font-size: 12px;
+      color: var(--subtext2);
+      margin-top: 6px;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+      margin-top: 8px;
+    }
+    .btn-primary:hover { background: var(--accent-light); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ─── CALL SCREEN ─── */
+    #call-screen {
+      flex-direction: row;
+      height: calc(100vh - 61px);
+    }
+
+    /* sidebar */
+    .call-sidebar {
+      width: 280px;
+      min-width: 280px;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      padding: 24px 20px;
+      gap: 20px;
+      overflow-y: auto;
+    }
+    .buyer-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      text-align: center;
+    }
+    .buyer-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6d28d9, #a78bfa);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 auto 12px;
+      color: white;
+    }
+    .buyer-name { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+    .buyer-role { font-size: 12px; color: var(--subtext); margin-bottom: 12px; }
+    .call-type-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      color: #a78bfa;
+    }
+
+    .sidebar-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--subtext2);
+      margin-bottom: 8px;
+    }
+    .context-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      font-size: 13px;
+      color: var(--subtext);
+      line-height: 1.55;
+    }
+    .scorecard-criteria {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .criterion-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .criterion-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    .timer {
+      font-size: 22px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      text-align: center;
+    }
+    .timer-label { font-size: 11px; color: var(--subtext); text-align: center; margin-top: 2px; }
+
+    .btn-end-call {
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      border: 1px solid var(--red);
+      color: var(--red);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-top: auto;
+    }
+    .btn-end-call:hover { background: rgba(239,68,68,0.1); }
+
+    /* chat area */
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .chat-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--subtext);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .message {
+      display: flex;
+      gap: 12px;
+      max-width: 80%;
+    }
+    .message.user { align-self: flex-end; flex-direction: row-reverse; }
+    .message.assistant { align-self: flex-start; }
+
+    .msg-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .message.assistant .msg-avatar { background: linear-gradient(135deg, #6d28d9, #a78bfa); color: white; }
+    .message.user .msg-avatar { background: var(--surface2); border: 1px solid var(--border); color: var(--subtext); }
+
+    .msg-content { }
+    .msg-name {
+      font-size: 11px;
+      color: var(--subtext);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .message.user .msg-name { text-align: right; }
+    .msg-bubble {
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .message.assistant .msg-bubble {
+      background: var(--ai-bubble);
+      border: 1px solid var(--border);
+      border-top-left-radius: 4px;
+    }
+    .message.user .msg-bubble {
+      background: var(--user-bubble);
+      border: 1px solid rgba(109,40,217,0.3);
+      border-top-right-radius: 4px;
+      color: #d4d4f7;
+    }
+
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      padding: 14px 16px;
+    }
+    .typing-dot {
+      width: 7px;
+      height: 7px;
+      background: var(--subtext);
+      border-radius: 50%;
+      animation: typingBounce 1.2s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-6px); opacity: 1; }
+    }
+
+    .chat-input-area {
+      border-top: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    .chat-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: 14px;
+      resize: none;
+      min-height: 48px;
+      max-height: 160px;
+      outline: none;
+      font-family: inherit;
+      line-height: 1.5;
+      transition: border-color 0.15s;
+    }
+    .chat-input:focus { border-color: var(--accent-light); }
+    .chat-input::placeholder { color: var(--subtext2); }
+
+    .btn-send {
+      width: 44px;
+      height: 44px;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, opacity 0.15s;
+      flex-shrink: 0;
+    }
+    .btn-send:hover { background: var(--accent-light); }
+    .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-send svg { width: 18px; height: 18px; fill: white; }
+
+    /* ─── SCORECARD SCREEN ─── */
+    #scorecard-screen {
+      align-items: center;
+      padding: 40px 20px 60px;
+      overflow-y: auto;
+    }
+    .scorecard-card {
+      width: 100%;
+      max-width: 720px;
+    }
+    .scorecard-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .scorecard-header h1 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+    .scorecard-header p { color: var(--subtext); font-size: 14px; }
+
+    .score-circle-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 32px;
+    }
+    .score-circle {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface);
+      border: 3px solid var(--accent);
+      box-shadow: 0 0 30px var(--accent-glow);
+    }
+    .score-number { font-size: 36px; font-weight: 800; color: #a78bfa; line-height: 1; }
+    .score-denom { font-size: 14px; color: var(--subtext); }
+
+    .criteria-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .criterion-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .criterion-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .criterion-name { font-size: 15px; font-weight: 600; }
+    .criterion-score-badge {
+      font-size: 13px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .score-high { background: rgba(16,185,129,0.15); color: var(--green); }
+    .score-mid { background: rgba(245,158,11,0.15); color: var(--yellow); }
+    .score-low { background: rgba(239,68,68,0.15); color: var(--red); }
+
+    .criterion-bar-bg {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin-bottom: 12px;
+    }
+    .criterion-bar-fill {
+      height: 4px;
+      border-radius: 2px;
+      transition: width 1s ease;
+    }
+
+    .criterion-checks {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .check-item {
+      display: flex;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--subtext);
+      line-height: 1.4;
+    }
+    .check-icon { flex-shrink: 0; margin-top: 1px; }
+    .check-icon.pass { color: var(--green); }
+    .check-icon.fail { color: var(--red); }
+
+    .evidence-quote {
+      margin-top: 8px;
+      padding: 10px 14px;
+      background: var(--surface2);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      font-size: 12px;
+      color: var(--subtext);
+      font-style: italic;
+      line-height: 1.5;
+    }
+
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 12px;
+    }
+    .summary-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--subtext);
+      margin-bottom: 12px;
+    }
+    .summary-item {
+      display: flex;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--subtext);
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+    .summary-item:last-child { margin-bottom: 0; }
+    .summary-bullet { flex-shrink: 0; }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    .btn-secondary {
+      flex: 1;
+      padding: 13px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--subtext); }
+    .btn-primary.flex1 { flex: 1; margin-top: 0; }
+
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(13,13,13,0.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 999;
+      backdrop-filter: blur(4px);
+    }
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 15px; color: var(--subtext); }
+
+    .error-banner {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #fca5a5;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 700px) {
+      #call-screen { flex-direction: column; }
+      .call-sidebar { width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid var(--border); flex-direction: row; flex-wrap: wrap; padding: 16px; }
+      .buyer-card { min-width: 180px; }
+      .field-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">
+    <div class="logo-icon">🎯</div>
+    Inven Sales Simulator
+  </div>
+  <span class="nav-tag">Internal Beta</span>
+</nav>
+
+<!-- ═══ SETUP SCREEN ═══ -->
+<div id="setup-screen" class="screen active">
+  <div class="setup-card">
+    <div class="setup-header">
+      <h1>Configure your simulation</h1>
+      <p>Set up the buyer, call type, and scoring rubric before you start.</p>
+    </div>
+
+    <div id="setup-error" class="error-banner" style="display:none;"></div>
+
+    <div class="form-section">
+      <div class="form-section-title">🔑 OpenAI API Key</div>
+      <div class="field">
+        <label>API Key</label>
+        <input type="password" id="api-key" placeholder="sk-..." autocomplete="off">
+        <div class="api-notice">Stored in memory only. Never sent anywhere except OpenAI.</div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">👤 Buyer Persona</div>
+      <div class="field-row">
+        <div class="field">
+          <label>First name</label>
+          <input type="text" id="buyer-name" placeholder="e.g. Sarah" value="Sarah">
+        </div>
+        <div class="field">
+          <label>Last name</label>
+          <input type="text" id="buyer-lastname" placeholder="e.g. Chen" value="Chen">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Title / Role</label>
+          <input type="text" id="buyer-role" placeholder="e.g. VP of Sales" value="VP of Sales">
+        </div>
+        <div class="field">
+          <label>Company</label>
+          <input type="text" id="buyer-company" placeholder="e.g. Acme Corp" value="Acme Corp">
+        </div>
+      </div>
+      <div class="field">
+        <label>Company overview</label>
+        <textarea id="buyer-company-overview" placeholder="What does their company do? Size, industry, current challenges...">B2B SaaS company with 150 AEs across EMEA and North America. Currently using Gong for call recording but lacking structured training methodology. High rep turnover (30%) and long ramp times (6 months).</textarea>
+      </div>
+      <div class="field">
+        <label>Why they're taking this call</label>
+        <textarea id="buyer-why" placeholder="What's their motivation? What problem are they trying to solve?">Their CRO set a goal to cut ramp time to 3 months. Sarah has budget to explore sales training tools but is skeptical of AI roleplay after a bad experience with a competitor.</textarea>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">📞 Call Type</div>
+      <div class="pill-group" id="call-type-group">
+        <div class="pill" data-value="cold_call">Cold Call</div>
+        <div class="pill selected" data-value="discovery">Discovery</div>
+        <div class="pill" data-value="demo">Demo</div>
+        <div class="pill" data-value="negotiation">Negotiation</div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">📋 Scoring Rubric</div>
+      <div class="pill-group" id="scorecard-group">
+        <div class="pill selected" data-value="discovery">Discovery Default</div>
+        <div class="pill" data-value="meddic">MEDDIC</div>
+        <div class="pill" data-value="challenger">Challenger</div>
+        <div class="pill" data-value="voss">Voss Negotiation</div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">🏢 Your Context (Inven)</div>
+      <div class="field">
+        <label>What you're selling / pitching</label>
+        <textarea id="seller-context" placeholder="Describe your product, value prop, pricing...">Inven is an AI-powered company intelligence platform. We give sales reps deep company data (financials, headcount trends, org structure) so they can prospect smarter and personalize outreach. Pricing starts at €X/seat/month.</textarea>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="start-btn" onclick="startSimulation()">
+      Start Simulation →
+    </button>
+  </div>
+</div>
+
+<!-- ═══ CALL SCREEN ═══ -->
+<div id="call-screen" class="screen">
+  <div class="call-sidebar">
+    <div class="buyer-card">
+      <div class="buyer-avatar" id="call-avatar">SC</div>
+      <div class="buyer-name" id="call-buyer-name">Sarah Chen</div>
+      <div class="buyer-role" id="call-buyer-role">VP of Sales · Acme Corp</div>
+      <div class="call-type-badge" id="call-type-label">Discovery</div>
+    </div>
+
+    <div>
+      <div class="sidebar-section-title">Call context</div>
+      <div class="context-box" id="sidebar-context">Loading...</div>
+    </div>
+
+    <div>
+      <div class="sidebar-section-title">Scoring criteria</div>
+      <div class="scorecard-criteria" id="sidebar-criteria"></div>
+    </div>
+
+    <div style="margin-top: auto;">
+      <div class="timer" id="call-timer">0:00</div>
+      <div class="timer-label">Call duration</div>
+    </div>
+
+    <button class="btn-end-call" onclick="endCall()">End Call & Score</button>
+  </div>
+
+  <div class="chat-area">
+    <div class="chat-header">
+      <div class="live-dot"></div>
+      Live simulation — type your response below
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="chat-input-area">
+      <textarea class="chat-input" id="chat-input" placeholder="Type your response..." rows="1" onkeydown="handleKeydown(event)" oninput="autoResize(this)"></textarea>
+      <button class="btn-send" id="send-btn" onclick="sendMessage()" title="Send">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCORECARD SCREEN ═══ -->
+<div id="scorecard-screen" class="screen">
+  <div class="scorecard-card">
+    <div class="scorecard-header">
+      <h1>Call Scorecard</h1>
+      <p id="sc-buyer-line">Sarah Chen · VP of Sales · Acme Corp</p>
+    </div>
+
+    <div class="score-circle-wrap">
+      <div class="score-circle">
+        <div class="score-number" id="sc-total-score">—</div>
+        <div class="score-denom" id="sc-total-denom">/ 10</div>
+      </div>
+    </div>
+
+    <div class="criteria-list" id="criteria-list"></div>
+
+    <div class="summary-card" id="strengths-card" style="display:none;">
+      <div class="summary-title">✅ Strengths</div>
+      <div id="strengths-list"></div>
+    </div>
+
+    <div class="summary-card" id="improvements-card" style="display:none;">
+      <div class="summary-title">🎯 Next focus areas</div>
+      <div id="improvements-list"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-secondary" onclick="goToSetup()">New Simulation</button>
+      <button class="btn-primary flex1" onclick="retryCall()">Retry Same Scenario →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loading" style="display:none;">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">Setting up your buyer...</div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let state = {
+  apiKey: '',
+  buyer: {},
+  callType: 'discovery',
+  scorecard: 'discovery',
+  sellerContext: '',
+  messages: [], // {role, content}
+  timerInterval: null,
+  callSeconds: 0,
+  isTyping: false,
+};
+
+// ─── SCORECARDS ───────────────────────────────────────────────────────────────
+const SCORECARDS = {
+  discovery: {
+    name: 'Discovery Default',
+    criteria: [
+      { id: 'needs', name: 'Needs discovery', weight: 25, desc: 'Uncovered specific pain points and business impact' },
+      { id: 'pain', name: 'Pain qualification', weight: 25, desc: 'Quantified the pain and urgency' },
+      { id: 'value', name: 'Value articulation', weight: 25, desc: 'Connected product value to buyer\'s specific situation' },
+      { id: 'next', name: 'Next steps', weight: 25, desc: 'Secured a concrete, date-specific follow-up' },
+    ]
+  },
+  meddic: {
+    name: 'MEDDIC',
+    criteria: [
+      { id: 'metrics', name: 'Metrics', weight: 17, desc: 'Identified quantifiable success metrics' },
+      { id: 'economic', name: 'Economic Buyer', weight: 17, desc: 'Identified and engaged the economic buyer' },
+      { id: 'decision_criteria', name: 'Decision Criteria', weight: 17, desc: 'Understood how they evaluate vendors' },
+      { id: 'decision_process', name: 'Decision Process', weight: 16, desc: 'Mapped the buying process and timeline' },
+      { id: 'pain', name: 'Identify Pain', weight: 17, desc: 'Uncovered and confirmed the compelling event' },
+      { id: 'champion', name: 'Champion', weight: 16, desc: 'Identified and tested a potential champion' },
+    ]
+  },
+  challenger: {
+    name: 'Challenger',
+    criteria: [
+      { id: 'teach', name: 'Commercial teaching', weight: 30, desc: 'Introduced a new perspective or insight the buyer didn\'t have' },
+      { id: 'tailor', name: 'Tailoring', weight: 25, desc: 'Tailored the pitch to the buyer\'s specific industry/role' },
+      { id: 'control', name: 'Taking control', weight: 25, desc: 'Maintained control of the conversation direction' },
+      { id: 'tension', name: 'Constructive tension', weight: 20, desc: 'Challenged the buyer\'s current thinking constructively' },
+    ]
+  },
+  voss: {
+    name: 'Voss Negotiation',
+    criteria: [
+      { id: 'empathy', name: 'Tactical empathy', weight: 25, desc: 'Labeled emotions and showed genuine understanding' },
+      { id: 'calibrated', name: 'Calibrated questions', weight: 25, desc: 'Used "how" and "what" questions to guide the conversation' },
+      { id: 'mirror', name: 'Mirroring & labeling', weight: 20, desc: 'Used mirroring to encourage elaboration' },
+      { id: 'anchor', name: 'Anchoring to reality', weight: 15, desc: 'Anchored the deal to business reality, not just price' },
+      { id: 'next', name: 'Securing next step', weight: 15, desc: 'Locked a concrete next step before ending' },
+    ]
+  }
+};
+
+// ─── CALL TYPE DESCRIPTIONS ───────────────────────────────────────────────────
+const CALL_TYPE_LABELS = {
+  cold_call: 'Cold Call',
+  discovery: 'Discovery',
+  demo: 'Demo',
+  negotiation: 'Negotiation',
+};
+
+const CALL_TYPE_BUYER_INSTRUCTIONS = {
+  cold_call: 'You were cold-called — you have 2 minutes, are skeptical, and need a strong hook to stay on the line. Be polite but guarded. You can be convinced to stay if they immediately show value.',
+  discovery: 'You agreed to a discovery call. You are open to exploring but have not committed to anything. Ask probing questions back. Be realistic — you have other priorities and a full calendar.',
+  demo: 'You are evaluating their product in a demo. You have specific requirements and will ask tough feature questions. You have 1-2 competing vendors.',
+  negotiation: 'You are in a negotiation. You like the product but are pushing back on price and contract terms. Your procurement team is involved. Push for discounts and favourable terms.',
+};
+
+// ─── PILL SELECTION ───────────────────────────────────────────────────────────
+document.querySelectorAll('#call-type-group .pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('#call-type-group .pill').forEach(p => p.classList.remove('selected'));
+    pill.classList.add('selected');
+    state.callType = pill.dataset.value;
+    // Auto-match scorecard to call type
+    if (pill.dataset.value === 'negotiation') selectScorecard('voss');
+    else if (pill.dataset.value === 'discovery') selectScorecard('discovery');
+  });
+});
+
+document.querySelectorAll('#scorecard-group .pill').forEach(pill => {
+  pill.addEventListener('click', () => selectScorecard(pill.dataset.value));
+});
+
+function selectScorecard(value) {
+  document.querySelectorAll('#scorecard-group .pill').forEach(p => {
+    p.classList.toggle('selected', p.dataset.value === value);
+  });
+  state.scorecard = value;
+}
+
+// ─── SETUP → CALL ─────────────────────────────────────────────────────────────
+async function startSimulation() {
+  const apiKey = document.getElementById('api-key').value.trim();
+  const firstName = document.getElementById('buyer-name').value.trim();
+  const lastName = document.getElementById('buyer-lastname').value.trim();
+  const role = document.getElementById('buyer-role').value.trim();
+  const company = document.getElementById('buyer-company').value.trim();
+  const overview = document.getElementById('buyer-company-overview').value.trim();
+  const why = document.getElementById('buyer-why').value.trim();
+  const sellerCtx = document.getElementById('seller-context').value.trim();
+
+  const errorEl = document.getElementById('setup-error');
+  errorEl.style.display = 'none';
+
+  if (!apiKey) return showError('Please enter your OpenAI API key.');
+  if (!firstName || !company) return showError('Please enter at least buyer name and company.');
+  if (!sellerCtx) return showError('Please describe what you are selling.');
+
+  state.apiKey = apiKey;
+  state.buyer = { firstName, lastName, role, company, overview, why };
+  state.sellerContext = sellerCtx;
+  state.messages = [];
+
+  // Build sidebar
+  document.getElementById('call-avatar').textContent = (firstName[0] + (lastName[0] || '')).toUpperCase();
+  document.getElementById('call-buyer-name').textContent = `${firstName} ${lastName}`;
+  document.getElementById('call-buyer-role').textContent = `${role} · ${company}`;
+  document.getElementById('call-type-label').textContent = CALL_TYPE_LABELS[state.callType];
+  document.getElementById('sidebar-context').textContent = why || overview || 'No additional context provided.';
+
+  const criteria = SCORECARDS[state.scorecard].criteria;
+  const criteriaContainer = document.getElementById('sidebar-criteria');
+  criteriaContainer.innerHTML = criteria.map(c => `
+    <div class="criterion-item">
+      <div class="criterion-dot"></div>
+      <span>${c.name}</span>
+    </div>
+  `).join('');
+
+  // Switch screen
+  showScreen('call-screen');
+  startTimer();
+  document.getElementById('messages').innerHTML = '';
+
+  // Get opening line from AI buyer
+  showLoading('Building your buyer persona...');
+  try {
+    const openingLine = await getBuyerOpening();
+    hideLoading();
+    appendMessage('assistant', openingLine, `${firstName} ${lastName}`);
+    document.getElementById('chat-input').focus();
+  } catch (e) {
+    hideLoading();
+    showError(e.message);
+    showScreen('setup-screen');
+  }
+}
+
+// ─── BUYER SYSTEM PROMPT ──────────────────────────────────────────────────────
+function buildSystemPrompt() {
+  const b = state.buyer;
+  const callInstr = CALL_TYPE_BUYER_INSTRUCTIONS[state.callType];
+  return `You are ${b.firstName} ${b.lastName}, ${b.role} at ${b.company}.
+
+COMPANY CONTEXT:
+${b.overview}
+
+WHY YOU ARE ON THIS CALL:
+${b.why}
+
+CALL TYPE INSTRUCTIONS:
+${callInstr}
+
+WHAT THEY ARE SELLING:
+${state.sellerContext}
+
+ROLEPLAY RULES:
+- Stay completely in character as ${b.firstName} throughout the entire conversation.
+- Respond naturally as a busy senior executive would — concise, occasionally skeptical, asking real questions.
+- Have realistic objections based on your context (budget, timing, competing priorities, past bad experiences).
+- Do NOT be too easy. Make the rep work for it, but be reasonable.
+- Do NOT break character or acknowledge you are an AI.
+- Speak in first person. Keep responses to 2-4 sentences unless pushed to elaborate.
+- If the rep uses good sales techniques (empathy, good questions, tailoring), respond more positively.
+- If the rep is generic or pushy, push back more.
+- This is a voice call simulation — be conversational, not formal.`;
+}
+
+// ─── OPENAI API ───────────────────────────────────────────────────────────────
+async function callOpenAI(messages, temperature = 0.8) {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${state.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages,
+      temperature,
+      max_tokens: 400,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `OpenAI error ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.choices[0].message.content;
+}
+
+async function getBuyerOpening() {
+  const systemPrompt = buildSystemPrompt();
+  const b = state.buyer;
+  const openingPrompt = `The sales rep just joined the call. Start the conversation as ${b.firstName} would — answer the phone, say hello, and give a brief indication of your current mood/context for this call. Keep it to 1-2 sentences.`;
+
+  const msgs = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: openingPrompt },
+  ];
+
+  const reply = await callOpenAI(msgs);
+  state.messages.push({ role: 'assistant', content: reply });
+  return reply;
+}
+
+// ─── SEND MESSAGE ─────────────────────────────────────────────────────────────
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text || state.isTyping) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  appendMessage('user', text, 'You');
+  state.messages.push({ role: 'user', content: text });
+
+  state.isTyping = true;
+  document.getElementById('send-btn').disabled = true;
+
+  const typingEl = appendTypingIndicator();
+
+  try {
+    const systemPrompt = buildSystemPrompt();
+    const apiMessages = [
+      { role: 'system', content: systemPrompt },
+      ...state.messages.slice(-20), // keep last 20 turns
+    ];
+
+    const reply = await callOpenAI(apiMessages);
+    typingEl.remove();
+    state.messages.push({ role: 'assistant', content: reply });
+    appendMessage('assistant', reply, `${state.buyer.firstName} ${state.buyer.lastName}`);
+  } catch (e) {
+    typingEl.remove();
+    appendMessage('assistant', `⚠️ Error: ${e.message}`, 'System');
+  } finally {
+    state.isTyping = false;
+    document.getElementById('send-btn').disabled = false;
+    document.getElementById('chat-input').focus();
+  }
+}
+
+// ─── END CALL & SCORE ─────────────────────────────────────────────────────────
+async function endCall() {
+  if (state.messages.length < 2) {
+    alert('Have at least one exchange before ending the call.');
+    return;
+  }
+
+  stopTimer();
+  showLoading('Scoring your call...');
+
+  try {
+    const scoreData = await scoreCall();
+    hideLoading();
+    renderScorecard(scoreData);
+    showScreen('scorecard-screen');
+  } catch (e) {
+    hideLoading();
+    alert(`Scoring failed: ${e.message}`);
+  }
+}
+
+async function scoreCall() {
+  const criteria = SCORECARDS[state.scorecard].criteria;
+  const transcript = state.messages
+    .map(m => `${m.role === 'user' ? 'REP' : 'BUYER'}: ${m.content}`)
+    .join('\n\n');
+
+  const scoringPrompt = `You are a sales coach scoring a ${CALL_TYPE_LABELS[state.callType]} call.
+
+WHAT IS BEING SOLD:
+${state.sellerContext}
+
+BUYER CONTEXT:
+${state.buyer.firstName} ${state.buyer.lastName}, ${state.buyer.role} at ${state.buyer.company}.
+${state.buyer.overview}
+
+TRANSCRIPT:
+${transcript}
+
+SCORING RUBRIC (${SCORECARDS[state.scorecard].name}):
+${criteria.map(c => `- ${c.name} (${c.weight}% weight): ${c.desc}`).join('\n')}
+
+Score each criterion from 0-10. Be honest and rigorous — a 7+ should require clear evidence from the transcript.
+
+Respond with ONLY valid JSON in this exact format:
+{
+  "overall": <number 0-10, weighted average>,
+  "criteria": [
+    {
+      "id": "<criterion id>",
+      "name": "<criterion name>",
+      "score": <0-10>,
+      "max": 10,
+      "weight": <weight percentage>,
+      "summary": "<1-sentence assessment>",
+      "evidence": "<direct quote or observation from transcript, or null>",
+      "passed": <true if score >= 7>
+    }
+  ],
+  "strengths": ["<strength 1>", "<strength 2>"],
+  "improvements": ["<improvement 1>", "<improvement 2>", "<improvement 3>"],
+  "next_focus": "<single most important thing to work on next>"
+}`;
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${state.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: scoringPrompt }],
+      temperature: 0.3,
+      max_tokens: 1200,
+      response_format: { type: 'json_object' },
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `OpenAI error ${res.status}`);
+  }
+
+  const data = await res.json();
+  return JSON.parse(data.choices[0].message.content);
+}
+
+// ─── RENDER SCORECARD ─────────────────────────────────────────────────────────
+function renderScorecard(data) {
+  const b = state.buyer;
+  document.getElementById('sc-buyer-line').textContent =
+    `${b.firstName} ${b.lastName} · ${b.role} · ${b.company} · ${CALL_TYPE_LABELS[state.callType]}`;
+
+  const overall = Math.round(data.overall * 10) / 10;
+  document.getElementById('sc-total-score').textContent = overall;
+  document.getElementById('sc-total-denom').textContent = '/ 10';
+
+  // Color circle based on score
+  const circle = document.querySelector('.score-circle');
+  const scoreColor = overall >= 7 ? 'var(--green)' : overall >= 5 ? 'var(--yellow)' : 'var(--red)';
+  circle.style.borderColor = scoreColor;
+  circle.style.boxShadow = `0 0 30px ${overall >= 7 ? 'rgba(16,185,129,0.2)' : overall >= 5 ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)'}`;
+  document.getElementById('sc-total-score').style.color = scoreColor;
+
+  // Criteria
+  const criteriaList = document.getElementById('criteria-list');
+  criteriaList.innerHTML = (data.criteria || []).map(c => {
+    const pct = (c.score / 10) * 100;
+    const scoreClass = c.score >= 7 ? 'score-high' : c.score >= 5 ? 'score-mid' : 'score-low';
+    const barColor = c.score >= 7 ? 'var(--green)' : c.score >= 5 ? 'var(--yellow)' : 'var(--red)';
+    const evidenceHtml = c.evidence ? `<div class="evidence-quote">"${c.evidence}"</div>` : '';
+    return `
+      <div class="criterion-card">
+        <div class="criterion-header">
+          <div class="criterion-name">${c.name}</div>
+          <div class="criterion-score-badge ${scoreClass}">${c.score}/10 · ${c.weight}%</div>
+        </div>
+        <div class="criterion-bar-bg">
+          <div class="criterion-bar-fill" style="width: ${pct}%; background: ${barColor};"></div>
+        </div>
+        <div class="criterion-checks">
+          <div class="check-item">
+            <span class="check-icon ${c.passed ? 'pass' : 'fail'}">${c.passed ? '✓' : '✗'}</span>
+            <span>${c.summary}</span>
+          </div>
+          ${evidenceHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Strengths
+  if (data.strengths?.length) {
+    document.getElementById('strengths-card').style.display = 'block';
+    document.getElementById('strengths-list').innerHTML = data.strengths.map(s =>
+      `<div class="summary-item"><span class="summary-bullet">→</span><span>${s}</span></div>`
+    ).join('');
+  }
+
+  // Improvements
+  if (data.improvements?.length) {
+    document.getElementById('improvements-card').style.display = 'block';
+    const items = data.improvements.slice(0, 3);
+    if (data.next_focus) items.unshift(`<strong>Priority:</strong> ${data.next_focus}`);
+    document.getElementById('improvements-list').innerHTML = items.map((s, i) =>
+      `<div class="summary-item"><span class="summary-bullet">${i === 0 && data.next_focus ? '🎯' : '→'}</span><span>${s}</span></div>`
+    ).join('');
+  }
+}
+
+// ─── NAVIGATION ───────────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goToSetup() {
+  stopTimer();
+  showScreen('setup-screen');
+}
+
+function retryCall() {
+  // Reset messages, keep buyer config
+  state.messages = [];
+  showScreen('call-screen');
+  startTimer();
+  document.getElementById('messages').innerHTML = '';
+  showLoading('Resetting simulation...');
+  getBuyerOpening().then(opening => {
+    hideLoading();
+    appendMessage('assistant', opening, `${state.buyer.firstName} ${state.buyer.lastName}`);
+    document.getElementById('chat-input').focus();
+  }).catch(e => {
+    hideLoading();
+    alert(e.message);
+  });
+}
+
+// ─── UI HELPERS ───────────────────────────────────────────────────────────────
+function appendMessage(role, content, name) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  const initials = role === 'user' ? 'You' : name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  div.innerHTML = `
+    <div class="msg-avatar">${initials}</div>
+    <div class="msg-content">
+      <div class="msg-name">${name}</div>
+      <div class="msg-bubble">${escapeHtml(content)}</div>
+    </div>
+  `;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function appendTypingIndicator() {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'message assistant';
+  const b = state.buyer;
+  const initials = `${b.firstName[0]}${b.lastName?.[0] || ''}`.toUpperCase();
+  div.innerHTML = `
+    <div class="msg-avatar">${initials}</div>
+    <div class="msg-content">
+      <div class="msg-name">${b.firstName} ${b.lastName}</div>
+      <div class="msg-bubble">
+        <div class="typing-indicator">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      </div>
+    </div>
+  `;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function showLoading(text = 'Loading...') {
+  document.getElementById('loading-text').textContent = text;
+  document.getElementById('loading').style.display = 'flex';
+}
+function hideLoading() {
+  document.getElementById('loading').style.display = 'none';
+}
+function showError(msg) {
+  const el = document.getElementById('setup-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+}
+
+// ─── TIMER ────────────────────────────────────────────────────────────────────
+function startTimer() {
+  stopTimer();
+  state.callSeconds = 0;
+  updateTimer();
+  state.timerInterval = setInterval(() => {
+    state.callSeconds++;
+    updateTimer();
+  }, 1000);
+}
+function stopTimer() {
+  if (state.timerInterval) {
+    clearInterval(state.timerInterval);
+    state.timerInterval = null;
+  }
+}
+function updateTimer() {
+  const m = Math.floor(state.callSeconds / 60);
+  const s = state.callSeconds % 60;
+  document.getElementById('call-timer').textContent = `${m}:${String(s).padStart(2, '0')}`;
+}
+
+// ─── INPUT HELPERS ────────────────────────────────────────────────────────────
+function handleKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+}
+</script>
+</body>
+</html>
